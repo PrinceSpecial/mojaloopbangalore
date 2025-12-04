@@ -1,13 +1,17 @@
+/* eslint-disable @stylistic/member-delimiter-style */
 /* eslint-disable @stylistic/semi */
 /* eslint-disable @stylistic/quotes */
+
 import { workerData } from "worker_threads";
 import { sendPayment } from "../service/sendPayment.js";
+
+// Enlever les types TypeScript, utiliser du JS pur
 
 (async () => {
   try {
     const { rows } = workerData;
 
-    if (!rows.length) {
+    if (!Array.isArray(rows) || rows.length === 0) {
       console.log("Aucun utilisateur trouvé.");
       return;
     }
@@ -16,16 +20,16 @@ import { sendPayment } from "../service/sendPayment.js";
     const batchSize = 50; // Par exemple, envoyer 50 emails à la fois
 
     for (let i = 0; i < rows.length; i += batchSize) {
-      const batch = rows.slice(i, i + batchSize); // Prends seulement les 50 éléments du lot
+      const batch = rows.slice(i, i + batchSize);
       const csvProcessPromise = batch.map((user) => {
         console.log("Do this for", user);
-        return sendPayment(user); // ou ton traitement asynchrone
+        return sendPayment(user);
       });
-      await Promise.all(csvProcessPromise); // Attend ce lot avant de passer au suivant
+      await Promise.all(csvProcessPromise);
     }
 
-    console.log("Toutes les pensions ont été envoyés.");
+    console.log("Toutes les pensions ont été envoyées.");
   } catch (error) {
-    console.error("Erreur lors de l'envoie des pensions :", error);
+    console.error("Erreur lors de l'envoi des pensions :", error);
   }
 })();
