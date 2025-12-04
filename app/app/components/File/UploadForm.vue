@@ -79,6 +79,10 @@ import { ref, watch } from 'vue'
 
 const model = defineModel({ type: Boolean })
 
+const emit = defineEmits<{
+  uploadSuccess: [data: { filename: string; timestamp: string; rowCount: number }]
+}>()
+
 const uploading = ref(false)
 const progress = ref(0)
 const currentFile = ref<File | null>(null)
@@ -86,6 +90,7 @@ let xhr: XMLHttpRequest | null = null
 
 // v-model target from UFileUpload — can be File, FileList, array or null
 const fileModel = ref<any>(null)
+const toast = useToast()
 
 watch(fileModel, (val) => {
   if (!val) {
@@ -111,7 +116,8 @@ function uploadFile(fileArg?: File | null) {
   const file = fileArg || currentFile.value
   if (!file) return
 
-  const url = '/api/upload'
+  // send directly to the server CSV processing endpoint
+  const url = '/api/csvCheck'
   const fd = new FormData()
   fd.append('file', file)
 
@@ -126,20 +132,50 @@ function uploadFile(fileArg?: File | null) {
 
   xhr.onload = () => {
     uploading.value = false
-    if (xhr && xhr.status === 200) {
-      progress.value = 100
-      // small delay to show 100%, then close modal
-      setTimeout(() => {
-        progress.value = 0
-        currentFile.value = null
-        fileModel.value = null
-        model.value = false
-      }, 800)
+    try {
+      const status = xhr?.status || 0
+      const text = xhr?.responseText || ''
+      const data = text ? JSON.parse(text) : null
+
+      if (status >= 200 && status < 300) {
+        progress.value = 100
+        // show success toast with server message
+        toast.add({
+          title: 'Upload terminé',
+          description: data?.message || (data?.rows ? `Fichier traité — ${data.rows.length} lignes` : 'Fichier envoyé au backend'),
+          color: 'success'
+        })
+
+        // emit success event to parent with file info
+        emit('uploadSuccess', {
+          filename: currentFile.value?.name || 'Unknown',
+          timestamp: new Date().toISOString(),
+          rowCount: data?.rows?.length || 0
+        })
+
+        // small delay to show 100%, then close modal
+        setTimeout(() => {
+          progress.value = 0
+          currentFile.value = null
+          fileModel.value = null
+          model.value = false
+        }, 800)
+      } else {
+        // non-2xx
+        toast.add({
+          title: 'Erreur upload',
+          description: data?.message || `Serveur renvoyé ${status}`,
+          color: 'error'
+        })
+      }
+    } catch (err: any) {
+      toast.add({ title: 'Erreur', description: err.message || 'Erreur lors du traitement', color: 'error' })
     }
   }
 
   xhr.onerror = () => {
     uploading.value = false
+    toast.add({ title: 'Erreur réseau', description: 'Impossible de contacter le serveur', color: 'error' })
   }
 
   uploading.value = true
