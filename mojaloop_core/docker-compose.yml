@@ -1,0 +1,106 @@
+version: '3.7'
+
+networks:
+  hackathon-net:
+    name: hackathon-net
+    driver: bridge
+
+services:
+
+  redis:
+    image: "redis:6.2.4-alpine"
+    networks:
+      - hackathon-net
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.1.2
+    container_name: redpanda
+    networks:
+      - hackathon-net
+    ports:
+      - "9092:9092"
+    command:
+      - redpanda start
+      - --overprovisioned
+      - --node-id 0
+      - --check=false
+      - --kafka-addr internal://0.0.0.0:9092
+      - --advertise-kafka-addr internal://redpanda:9092
+
+  ml-testing-toolkit:
+    image: mojaloop/ml-testing-toolkit:v15.0.0
+    container_name: ml-testing-toolkit
+    networks:
+      hackathon-net:
+        aliases:
+          - ttkhubsim
+    ports:
+      - "4040:4040"
+      - "5050:5050"
+    environment:
+      - AUTH_ENABLED=FALSE
+      - CURRENT_MODE=hub
+    command: npm start
+    volumes:
+      - "./spec_files:/opt/app/spec_files"
+
+  ml-testing-toolkit-ui:
+    image: mojaloop/ml-testing-toolkit-ui:v15.1.3
+    container_name: ml-testing-toolkit-ui
+    networks:
+      - hackathon-net
+    ports:
+      - "6060:6060"
+    environment:
+      - API_BASE_URL=http://localhost:5050
+      - AUTH_ENABLED=FALSE
+    command:
+      - sh
+      - /usr/share/nginx/start.sh
+
+  sdk-scheme-adapter:
+    image: mojaloop/sdk-scheme-adapter:latest
+    container_name: sdk-scheme-adapter
+    networks:
+      - hackathon-net
+    ports:
+      - "4000:4000"
+      - "4001:4001"
+    depends_on:
+      - redis
+      - ml-testing-toolkit
+    command: yarn nx run modules-api-svc:start
+    # env_file: ./mojaloop-connector-load-test.env
+    environment:
+      - CACHE_URL=redis://redis:6379
+      - PEER_ENDPOINT=ml-testing-toolkit:4040
+      - BACKEND_ENDPOINT=host.docker.internal:5000
+      # - BACKEND_ENDPOINT=http://sdk-scheme-adapter:4001
+
+      - DFSP_ID=itk-load-test-dfsp
+      - INBOUND_MUTUAL_TLS_ENABLED=false
+      - OUTBOUND_MUTUAL_TLS_ENABLED=false 
+      - JWS_SIGN=false
+      - JWS_VERIFY=false
+      - VALIDATE_INBOUND_JWS=false
+      - CHECK_ILP=false
+      
+      - AUTO_ACCEPT_QUOTES=true
+      - AUTO_ACCEPT_PARTY=true
+      - USE_QUOTE_SOURCE_FSP_AS_TRANSFER_PAYEE_FSP=false
+      - ALLOW_TRANSFER_WITHOUT_QUOTE=true
+
+      - BACKEND_EVENT_CONSUMER_BROKER_LIST=redpanda:9092
+      - BACKEND_EVENT_PRODUCER_BROKER_LIST=redpanda:9092
+      - FSPIOP_EVENT_CONSUMER_BROKER_LIST=redpanda:9092
+      - FSPIOP_EVENT_PRODUCER_BROKER_LIST=redpanda:9092
+      - EVENT_SDK_KAFKA_BROKER_LIST=redpanda:9092
+
+      - RESOURCE_VERSIONS="transfers=1.0,participants=1.0"
