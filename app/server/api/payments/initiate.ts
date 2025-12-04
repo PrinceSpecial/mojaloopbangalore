@@ -4,14 +4,13 @@
 import type { IncomingMessage } from "http";
 import formidable from "formidable";
 import type { Files, File as FormidableFile } from "formidable";
-import xlsx from "@e965/xlsx";
 import fs from "fs";
 import path from "path";
 import { defineEventHandler } from "h3";
 import type { H3Event } from "h3";
 import { processPaymentsBatch } from "~~/server/service/mojaloop";
 
-type CsvRow = Record<string, unknown>;
+type CsvRow = Record<string, string>;
 
 export default defineEventHandler(async (event: H3Event) => {
   const uploadDir = path.join(process.cwd(), "tmp/uploads");
@@ -47,36 +46,16 @@ export default defineEventHandler(async (event: H3Event) => {
     .extname(uploadedFile.originalFilename || uploadedFile.filepath)
     .toLowerCase();
 
-  let rows: CsvRow[] = [];
-
-  if (ext === ".xlsx") {
-    const workbook = xlsx.readFile(uploadedFile.filepath);
-    const sheet = workbook.SheetNames[0];
-    rows = xlsx.utils.sheet_to_json(workbook.Sheets[sheet]);
-  } else if (ext === ".csv") {
-    const csvText = fs.readFileSync(uploadedFile.filepath, "utf8");
-    rows = xlsx.utils.sheet_to_json(
-      xlsx.read(csvText, { type: "string" }).Sheets.Sheet1
-    );
-  } else {
+  if(ext !== ".csv" && ext !== ".xlsx") {
     throw new Error("Only CSV or XLSX files are accepted");
   }
-  try {
-    if (uploadedFile.filepath && fs.existsSync(uploadedFile.filepath)) {
-      fs.unlinkSync(uploadedFile.filepath);
-    }
-  } catch (err) {
-    console.error("Erreur lors de la suppression du fichier temporaire:", err);
-    // Non-blocking: only logging the error
-  }
-
-  // Start Event Stream
 
   const jobId = `batch_${Date.now()}`;
-
-  processPaymentsBatch(jobId, rows);
+  console.log("ABC")
+  processPaymentsBatch(jobId, uploadedFile, ext);
+  console.log("DEF")
   
-  return { jobId, total: rows.length };
+  return { jobId };
 
 });
 
