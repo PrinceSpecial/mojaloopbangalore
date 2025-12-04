@@ -1,0 +1,6 @@
+Référence,Client,Email,Service,Date,Heure,Prix,Statut,Paiement
+BK2024005,"Emma Moreau",emma.moreau@email.com,"Design UI/UX",2024-03-25,11:30,950,Confirmée,paid
+BK2024004,"Jean Dupont",jean.dupont@email.com,"Développement Web",2024-03-20,09:00,1200,Annulée,refunded
+BK2024002,"Pierre Martin",pierre.martin@email.com,"Design UI/UX",2024-03-18,10:00,800,Confirmée,paid
+BK2024001,"Marie Dubois",marie.dubois@email.com,"Développement Web",2024-03-15,14:00,1500,En attente,unpaid
+BK2024003,"Sophie Laurent",sophie.laurent@email.com,"Consultation SEO",2024-03-12,16:30,300,Terminée,paid

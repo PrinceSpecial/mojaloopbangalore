@@ -3,6 +3,8 @@ import { sub } from 'date-fns'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { Period, Range } from '~/types'
 
+const formModal = ref(false)
+
 const { isNotificationsSlideoverOpen } = useDashboard()
 
 const items = [[{
@@ -23,14 +25,20 @@ const period = ref<Period>('daily')
 </script>
 
 <template>
+  <FileUploadForm v-model="formModal" />
   <UDashboardPanel id="home">
     <template #header>
-      <UDashboardNavbar title="Home" :ui="{ right: 'gap-3' }">
+      <UDashboardNavbar title="Accueil" :ui="{ right: 'gap-3' }">
         <template #leading>
           <UDashboardSidebarCollapse />
         </template>
-
+        
         <template #right>
+          <UButton icon="i-lucide-plus" label="Télerverser le fichier" size="lg" class="rounded-full"
+            @click="() => {
+            formModal = true
+          }" 
+          />
           <UTooltip text="Notifications" :shortcuts="['N']">
             <UButton
               color="neutral"
@@ -44,9 +52,7 @@ const period = ref<Period>('daily')
             </UButton>
           </UTooltip>
 
-          <UDropdownMenu :items="items">
-            <UButton icon="i-lucide-plus" size="md" class="rounded-full" />
-          </UDropdownMenu>
+      
         </template>
       </UDashboardNavbar>
 
@@ -62,7 +68,7 @@ const period = ref<Period>('daily')
 
     <template #body>
       <HomeStats :period="period" :range="range" />
-      <HomeChart :period="period" :range="range" />
+      <!-- <HomeChart :period="period" :range="range" /> -->
       <HomeSales :period="period" :range="range" />
     </template>
   </UDashboardPanel>
