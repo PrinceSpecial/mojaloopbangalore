@@ -11,14 +11,19 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@e965/xlsx": "^0.20.3",
     "@iconify-json/lucide": "^1.2.75",
     "@iconify-json/simple-icons": "^1.2.60",
     "@nuxt/ui": "^4.2.1",
     "@unovis/ts": "^1.6.2",
     "@unovis/vue": "^1.6.2",
     "@vueuse/nuxt": "^13.9.0",
+    "axios": "^1.13.2",
+    "bree": "^9.2.4",
     "date-fns": "^4.1.0",
+    "formidable": "^3.5.4",
     "nuxt": "^4.2.1",
+    "uuid": "^13.0.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
