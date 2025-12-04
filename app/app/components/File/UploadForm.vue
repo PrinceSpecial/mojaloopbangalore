@@ -117,7 +117,8 @@ function uploadFile(fileArg?: File | null) {
   if (!file) return
 
   // send directly to the server CSV processing endpoint
-  const url = '/api/csvCheck'
+  // const url = '/api/csvCheck'
+  const url = '/api/payments/initiate'
   const fd = new FormData()
   fd.append('file', file)
 
@@ -132,6 +133,7 @@ function uploadFile(fileArg?: File | null) {
 
   xhr.onload = () => {
     uploading.value = false
+    
     try {
       const status = xhr?.status || 0
       const text = xhr?.responseText || ''
