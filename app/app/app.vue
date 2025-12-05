@@ -17,8 +17,8 @@ useHead({
   }
 })
 
-const title = 'PaiementsPension'
-const description = 'This project is a web application for managing bulk payments with Mojaloop.'
+const title = 'Paiements Pensions'
+const description = 'Gestion des paiements de pensions'
 
 useSeoMeta({
   title,
