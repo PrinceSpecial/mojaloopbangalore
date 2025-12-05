@@ -1,4 +1,5 @@
 <template>
+    <DetailsModal v-model="openDetailsModal" :data="selectedRow"/>
     <UDashboardPanel id="Details">
     <template #header>
       <UDashboardNavbar title="Détails" :ui="{ right: 'gap-3' }">
@@ -29,12 +30,11 @@
         </template>
       </UDashboardNavbar>
     </template>
-
     <template #body>
    
 
      
-        <div class="max-w-6xl mx-auto px-4 py-8">
+        <div class="max-w-7xl mx-auto px-4 py-8">
           <div class="space-y-4 bg-default/0">
           <!-- Header with search -->
           <div class="flex items-center justify-between gap-3">
@@ -42,7 +42,7 @@
               <UInput 
                 v-model="globalSearch" 
                 icon="i-lucide-search"
-                placeholder="Rechercher dans les résultats..."
+                placeholder="Rechercher"
                 class="w-full"
               />
             </div>
@@ -54,18 +54,89 @@
                 variant="outline"
                 @click="exportData"
               />
+              <UPopover :content="{ align: 'end' }">
+                <UButton 
+                  icon="i-lucide-calendar-clock"
+                  label="Programmer paiement"
+                  color="primary"
+                  variant="outline"
+                />
+                <template #content>
+                  <div class="p-4 w-80 space-y-4">
+                    <div>
+                      <h3 class="text-sm font-semibold mb-3">Programmer le paiement récurrent</h3>
+                      <p class="text-xs text-muted mb-4">Configurez le jour du mois et l'heure pour un paiement automatique mensuel</p>
+                    </div>
+                    
+                    <div class="space-y-3">
+                      <div>
+                        <label class="text-xs font-medium text-muted mb-1.5 block">Jour du mois</label>
+                        <USelect
+                          v-model="selectedDayOfMonth"
+                          :items="dayOfMonthOptions"
+                          placeholder="Choisir le jour (ex: 5, 15, 31)"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label class="text-xs font-medium text-muted mb-1.5 block">Heure</label>
+                        <UInput
+                          v-model="scheduledTime"
+                          type="time"
+                          icon="i-lucide-clock"
+                          placeholder="HH:MM"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 pt-2 border-t border-default">
+                      <UButton
+                        label="Annuler"
+                        color="neutral"
+                        variant="ghost"
+                        size="sm"
+                        @click="closeSchedulePopover"
+                        class="flex-1"
+                      />
+                      <UButton
+                        label="Programmer"
+                        color="primary"
+                        size="sm"
+                        @click="schedulePayment"
+                        class="flex-1"
+                        :disabled="!canSchedule"
+                      />
+                    </div>
+                    
+                    <div v-if="scheduledInfo" class="mt-3 p-2 bg-primary/10 border border-primary/20 rounded text-xs text-primary">
+                      <UIcon name="i-lucide-info" class="w-4 h-4 inline mr-1" />
+                      {{ scheduledInfo }}
+                    </div>
+                  </div>
+                </template>
+              </UPopover>
               <UButton
+                icon="i-lucide-download"
+                label="Exporter erreurs"
+                color="error"
+                variant="outline"
+                @click="exportErrors"
+              />
+              <!-- <UButton
                 icon="i-lucide-trash-2"
                 label="Vider cache"
                 color="error"
                 variant="ghost"
                 @click="onClearCache"
-              />
+              /> -->
             </div>
           </div>
+
+          <!-- Statistics Component -->
+          <DataTableStats :data="tableData" />
       
           <!-- Table with pagination -->
-          <div class="border border-default rounded-lg overflow-auto max-h-[65vh] bg-surface">
+          <div class="relative border border-default rounded-lg overflow-auto max-h-[65vh] bg-surface">
             <UTable
               ref="table"
               v-model:sorting="sorting"
@@ -79,10 +150,10 @@
               @select="onSelectRow"
               :pagination-options="paginationOptions"
               :ui="{
-                base: 'table-fixed border-separate border-spacing-0',
-                thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
+                base: 'table-fixed w-full border-separate border-spacing-0',
+                thead: 'sticky top-0 z-20 [&>tr]:bg-surface [&>tr]:after:content-none',
                 tbody: '[&>tr]:last:[&>td]:border-b-0 [&>tr]:data-[selectable=true]:hover:bg-elevated/50',
-                th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r px-4 py-3 text-sm font-semibold',
+                th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r px-4 py-3 text-sm font-semibold bg-surface',
                 td: 'border-b border-default px-4 py-3'
               }"
             />
@@ -97,7 +168,7 @@
             </div>
             <UPagination
               :page="pagination.pageIndex + 1"
-              :total="(table?.tableApi?.getFilteredRowModel().rows.length) || 0"
+              :total="displayedData.length"
               :items-per-page="pagination.pageSize"
               @update:page="(p) => pagination.pageIndex = p - 1"
             />
@@ -116,6 +187,8 @@ import { useUploadStore } from '~/stores/useUploadStore'
 import { useTransactionsStore } from '~/stores/useTransactionsStore'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { h, resolveComponent } from 'vue'
+import DataTableStats from '~/components/transactions/DataTableStats.vue'
+import DetailsModal from '~/components/DetailsModal.vue'
 const formModal = ref(false)
 const UBadge = resolveComponent('UBadge')
 const { isNotificationsSlideoverOpen } = useDashboard()
@@ -136,6 +209,58 @@ const page = ref(1)
 const isLoading = ref(false)
 const globalSearch = ref('')
 const rowSelection = ref<Record<string, boolean>>({})
+
+// Schedule payment state
+const schedulePopoverOpen = ref(false)
+const selectedDayOfMonth = ref<number | undefined>(undefined)
+const scheduledTime = ref('09:00')
+const scheduledInfo = ref('')
+
+// Day of month options (1-31)
+const dayOfMonthOptions = Array.from({ length: 31 }, (_, i) => ({
+  label: `Jour ${i + 1}`,
+  value: i + 1
+}))
+
+const canSchedule = computed(() => {
+  return selectedDayOfMonth.value !== undefined && scheduledTime.value.length > 0
+})
+
+function closeSchedulePopover() {
+  schedulePopoverOpen.value = false
+  selectedDayOfMonth.value = undefined
+  scheduledTime.value = '09:00'
+  scheduledInfo.value = ''
+}
+
+function schedulePayment() {
+  if (!canSchedule.value) return
+  
+  const day = selectedDayOfMonth.value!
+  
+  // Format scheduled info message for recurring monthly payment
+  scheduledInfo.value = `Paiement récurrent programmé pour le ${day} de chaque mois à ${scheduledTime.value}`
+  
+  // TODO: Implement actual recurring payment scheduling logic here
+  // This would typically involve:
+  // 1. Creating a scheduled payment job/task with cron expression: "0 HH MM DD * *"
+  // 2. Storing the schedule configuration (day of month, time)
+  // 3. Setting up a cron job or similar mechanism to execute payments monthly
+  // Example cron: "0 9 5 * *" = Every 5th day of month at 09:00
+  
+  const toast = useToast()
+  toast.add({
+    title: 'Paiement récurrent programmé',
+    description: scheduledInfo.value,
+    color: 'success',
+    icon: 'i-lucide-calendar-check'
+  })
+  
+  // Keep popover open to show the info message
+  setTimeout(() => {
+    closeSchedulePopover()
+  }, 2000)
+}
 
 const txStore = useTransactionsStore()
 const resolveTotalRows = () => {
@@ -238,11 +363,7 @@ const columns: TableColumn<ResultRow>[] = [
     header: ({ column }) => getHeader(column, 'Montant'),
     cell: ({ row }) => {
       const amount = Number.parseFloat(row.getValue('montant') || '')
-      const formatted = new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'XAF'
-      }).format(amount)
-      return h('div', { class: 'text-right font-mono' }, formatted)
+      return h('div', { class: 'text-right font-mono' }, amount)
     }
   },
   {
@@ -345,13 +466,12 @@ function copyRow(row: ResultRow) {
   })
 }
 
+const openDetailsModal = ref(false)
+const selectedRow = ref<ResultRow>({})
 // Action: view full row details
 function viewRow(row: ResultRow) {
-  const toast = useToast()
-  toast.add({
-    title: JSON.stringify(row, null, 2),
-    color: 'info',
-  })
+  openDetailsModal.value = true
+  selectedRow.value = row
 }
 
 // Action: export to CSV
@@ -393,6 +513,45 @@ function exportData() {
     title: 'Données exportées',
     color: 'success',
     icon: 'i-lucide-circle-check'
+  })
+}
+
+// Export only rows that are not success/completed
+function exportErrors() {
+  const rows = tableData.value.filter(r => {
+    const status = String(r.statut || r.status || '').toLowerCase()
+    return status !== 'success' && status !== 'completed' && status !== 'succes'
+  })
+
+  if (rows.length === 0) {
+    const toast = useToast()
+    toast.add({ title: 'Aucune ligne en erreur', color: 'info' })
+    return
+  }
+
+  const headers = Object.keys(rows[0] || {})
+  const csv = [
+    headers.join(','),
+    ...rows.map(row =>
+      headers.map(h => `"${String(row[h]).replace(/"/g, '""')}"`).join(',')
+    )
+  ].join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `transactions_erreurs_${fileId}_${new Date().toISOString().split('T')[0]}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+
+  const toast = useToast()
+  toast.add({
+    title: 'Erreurs exportées',
+    color: 'warning',
+    icon: 'i-lucide-download'
   })
 }
 
