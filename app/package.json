@@ -8,7 +8,10 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "migrate": "sequelize-cli db:migrate",
+    "migrate:create": "sequelize-cli migration:create --name",
+    "migrate:undo": "sequelize-cli db:migrate:undo"
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",
@@ -25,8 +28,11 @@
     "csv-parser": "^3.2.0",
     "date-fns": "^4.1.0",
     "formidable": "^3.5.4",
+    "mysql2": "^3.15.3",
     "nuxt": "^4.2.1",
     "pinia": "^3.0.4",
+    "sequelize": "^6.37.7",
+    "ts-node": "^10.9.2",
     "uuid": "^13.0.0",
     "zod": "^4.1.13"
   },
@@ -35,6 +41,8 @@
     "@types/formidable": "^3.4.6",
     "@types/node": "^24.10.1",
     "eslint": "^9.39.1",
+    "sequelize-cli": "^6.6.3",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.1.5"
   },

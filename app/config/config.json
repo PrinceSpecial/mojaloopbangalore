@@ -1,0 +1,42 @@
+{
+  "development": {
+    "username": "root",
+    "password": "root",
+    "database": "mojaloopBangalore",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "port": 8889,
+    "define": {
+      "charset": "utf8mb4"
+    },
+    "dialectOptions": {
+      "charset": "utf8mb4"
+    }
+  },
+  "test": {
+    "username": "root",
+    "password": null,
+    "database": "nbh_db",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "define": {
+      "charset": "utf8mb4"
+    },
+    "dialectOptions": {
+      "charset": "utf8mb4"
+    }
+  },
+  "production": {
+    "username": "ds",
+    "password": "dsdsdsdJ@U*IMWioJ",
+    "database": "ds",
+    "host": "mojaloopBangalore.net",
+    "dialect": "mysql",
+    "define": {
+      "charset": "utf8mb4"
+    },
+    "dialectOptions": {
+      "charset": "utf8mb4"
+    }
+  }
+}
