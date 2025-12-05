@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useUploadStore } from '~/stores/useUploadStore'
+import { useTransactionsStore } from '~/stores/useTransactionsStore'
 import { useRouter } from 'vue-router'
 
 interface FileItem {
@@ -8,6 +10,8 @@ interface FileItem {
   timestamp: number
   rowCount: number
   status: string
+  progress?: number
+  jobId?: string
 }
 
 const props = withDefaults(defineProps<{
@@ -19,6 +23,8 @@ const props = withDefaults(defineProps<{
 })
 
 const router = useRouter()
+const uploadStore = useUploadStore()
+const txStore = useTransactionsStore()
 
 const defaultColors = {
   in_progress: {
@@ -67,6 +73,27 @@ const colors = computed(() => {
 function go() {
   router.push(`/transactions/${props.file.id}`)
 }
+
+async function onClearCache() {
+  const ok = confirm('Confirmer : vider le cache local pour ce job ?')
+  if (!ok) return
+
+  // clear tx cache and reset progress
+  txStore.clearJob(props.file.jobId ?? props.file.id)
+  uploadStore.updateFile(props.file.id, { progress: 0, status: 'in_progress' })
+
+  const delServer = confirm('Supprimer aussi les fichiers serveur (CSV + meta) ?')
+  if (delServer && props.file.jobId) {
+    try {
+      await $fetch(`/api/payments/delete/${props.file.jobId}`, { method: 'POST' })
+      const toast = useToast()
+      toast.add({ title: 'Fichiers serveur supprimés', color: 'success' })
+    } catch (e) {
+      const toast = useToast()
+      toast.add({ title: 'Erreur suppression serveur', color: 'error' })
+    }
+  }
+}
 </script>
 
 <template>
@@ -77,7 +104,7 @@ function go() {
     <div class="absolute inset-0" :class="`bg-gradient-to-br ${colors.bgFrom}/10 ${colors.bgTo}/10 blur-xl`"></div>
 
     <div class="relative z-10">
-      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-start justify-between mb-3">
         <div class="flex items-center gap-3">
           <div class="p-2 rounded-lg" :class="colors.badgeBg">
             <svg class="w-5 h-5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -96,6 +123,9 @@ function go() {
             'bg-blue-600': file.status === 'completed',
             'bg-red-600': file.status === 'failed'
           }"></span>
+          <button @click.stop="onClearCache" title="Vider cache" class="ml-2 p-1 rounded hover:bg-gray-100">
+            <svg class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M8 6v14a2 2 0 002 2h4a2 2 0 002-2V6M10 11v6M14 11v6"/></svg>
+          </button>
         </div>
       </div>
 
@@ -123,8 +153,12 @@ function go() {
       </div>
 
       <div class="mt-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-gray-600">Progress</span>
+          <span class="text-xs font-medium text-gray-700">{{ file.progress ?? 0 }}%</span>
+        </div>
         <div class="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-          <div class="h-full rounded-full" :class="[`w-1/3`, `bg-gradient-to-r`, colors.progressFrom, colors.progressTo]"></div>
+          <div class="h-full rounded-full" :class="[`bg-gradient-to-r`, colors.progressFrom, colors.progressTo]" :style="{ width: (file.progress ?? 0) + '%' }"></div>
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import type { Period, Range } from '~/types'
 import { useUploadStore } from '~/stores/useUploadStore'
 import UploadedFileCard from '~/components/File/UploadedFileCard.vue'
+import TransactionStats from '@/components/home/TransactionStats.vue'
 import { onMounted } from 'vue'
 
 const formModal = ref(false)
@@ -31,15 +32,20 @@ const range = shallowRef<Range>({
 })
 const period = ref<Period>('daily')
 
-// Handle file upload success from child component and persist in store
+// Handle file upload success from child component.
+// The upload form already persists the file into the store, so avoid adding a duplicate here.
 const onUploadSuccess = (data: { filename: string; timestamp: string; rowCount: number }) => {
-  uploadStore.addFile({ filename: data.filename, rowCount: data.rowCount, timestamp: new Date(data.timestamp).getTime(), status: 'in_progress' })
+  const ts = new Date(data.timestamp).getTime()
+  const exists = uploadStore.files.some(f => f.filename === data.filename && Math.abs(f.timestamp - ts) < 2000)
+  if (!exists) {
+    uploadStore.addFile({ filename: data.filename, rowCount: data.rowCount, timestamp: ts, status: 'in_progress' })
+  }
 }
 </script>
 
 <template>
   <FileUploadForm v-model="formModal" @upload-success="onUploadSuccess" />
-  <UDashboardPanel id="home">
+  <UDashboardPanel id="home" :ui="{ body: 'overflow-y-auto h-full' }">
     <template #header>
       <UDashboardNavbar title="Accueil" :ui="{ right: 'gap-3' }">
         <template #leading>
@@ -47,7 +53,7 @@ const onUploadSuccess = (data: { filename: string; timestamp: string; rowCount: 
         </template>
         
         <template #right>
-          <UButton icon="i-lucide-plus" label="Télerverser le fichier" size="lg" class="rounded-full"
+          <UButton icon="i-lucide-plus" label="Téléverser le fichier" size="lg" class="rounded-full"
             @click="() => {
             formModal = true
           }" 
@@ -79,16 +85,20 @@ const onUploadSuccess = (data: { filename: string; timestamp: string; rowCount: 
     </template>
 
     <template #body>
-      <!-- Uploaded files processing status (now using store + component) -->
-      <div v-if="uploadStore.files.length > 0" class="mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <UploadedFileCard v-for="file in uploadStore.files" :key="file.id" :file="file" />
+      <div class="space-y-6 pb-6">
+        <!-- Uploaded files processing status (now using store + component) -->
+        <div v-if="uploadStore.files.length > 0">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <UploadedFileCard v-for="file in uploadStore.files" :key="file.id" :file="file" />
+          </div>
         </div>
-      </div>
 
-      <HomeStats :period="period" :range="range" />
-      <!-- <HomeChart :period="period" :range="range" /> -->
-      <HomeSales :period="period" :range="range" />
+        <TransactionStats />
+
+        <HomeStats :period="period" :range="range" />
+        <!-- <HomeChart :period="period" :range="range" /> -->
+        <!-- <HomeSales :period="period" :range="range" />-->
+      </div>
     </template>
   </UDashboardPanel>
 </template>

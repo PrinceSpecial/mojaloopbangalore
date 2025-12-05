@@ -6,6 +6,9 @@ const toast = useToast()
 
 const open = ref(false)
 
+import { onMounted } from 'vue'
+import { startUploadProgressPoller } from '~/composables/useUploadProgressPoller'
+
 const links = [[{
   label: 'Accueil',
   icon: 'i-lucide-house',
@@ -55,6 +58,10 @@ const groups = computed(() => [{
 //     }]
 //   })
 // })
+
+onMounted(() => {
+  startUploadProgressPoller()
+})
 </script>
 
 <template>

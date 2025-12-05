@@ -16,3 +16,24 @@
   --color-green-900: #0A5331;
   --color-green-950: #052E16;
 }
+
+/* Ensure html and body allow scrolling */
+html, body {
+  height: auto !important;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Ensure dashboard panels can scroll */
+#home {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#home > div:last-child {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  min-height: 0 !important;
+}
