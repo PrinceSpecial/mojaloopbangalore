@@ -1,4 +1,5 @@
 <template>
+    <DetailsModal v-model="openDetailsModal" :data="selectedRow"/>
     <UDashboardPanel id="Details">
     <template #header>
       <UDashboardNavbar title="Détails" :ui="{ right: 'gap-3' }">
@@ -126,6 +127,7 @@ import { useTransactionsStore } from '~/stores/useTransactionsStore'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { h, resolveComponent } from 'vue'
 import DataTableStats from '~/components/transactions/DataTableStats.vue'
+import DetailsModal from '~/components/DetailsModal.vue'
 const formModal = ref(false)
 const UBadge = resolveComponent('UBadge')
 const { isNotificationsSlideoverOpen } = useDashboard()
@@ -351,13 +353,12 @@ function copyRow(row: ResultRow) {
   })
 }
 
+const openDetailsModal = ref(false)
+const selectedRow = ref<ResultRow>({})
 // Action: view full row details
 function viewRow(row: ResultRow) {
-  const toast = useToast()
-  toast.add({
-    title: JSON.stringify(row, null, 2),
-    color: 'info',
-  })
+  openDetailsModal.value = true
+  selectedRow.value = row
 }
 
 // Action: export to CSV
