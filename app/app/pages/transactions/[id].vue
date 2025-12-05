@@ -1,65 +1,111 @@
 <template>
-  <div class="max-w-6xl mx-auto px-4 py-8">
-    <div class="space-y-4 bg-default/0">
-    <!-- Header with search -->
-    <div class="flex items-center justify-between gap-3">
-      <div class="">
-        <UInput 
-          v-model="globalSearch" 
-          icon="i-lucide-search"
-          placeholder="Rechercher dans les résultats..."
-          class="w-full"
-        />
-      </div>
-      <UButton 
-        icon="i-lucide-download"
-        label="Exporter"
-        color="neutral"
-        variant="outline"
-        @click="exportData"
-      />
-    </div>
+    <UDashboardPanel id="Details">
+    <template #header>
+      <UDashboardNavbar title="Détails" :ui="{ right: 'gap-3' }">
+        <template #leading>
+          <UDashboardSidebarCollapse />
+        </template>
+        
+        <template #right>
+          <UButton icon="i-lucide-plus" label="Télerverser le fichier" size="lg" class="rounded-full"
+            @click="() => {
+            formModal = true
+          }" 
+          />
+          <UTooltip text="Notifications" :shortcuts="['N']">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              square
+              @click="isNotificationsSlideoverOpen = true"
+            >
+              <UChip color="error" inset>
+                <UIcon name="i-lucide-bell" class="size-5 shrink-0" />
+              </UChip>
+            </UButton>
+          </UTooltip>
 
-    <!-- Table with pagination -->
-    <div class="border border-default rounded-lg overflow-auto max-h-[65vh] bg-surface">
-      <UTable
-        ref="table"
-        v-model:sorting="sorting"
-        v-model:column-filters="columnFilters"
-        v-model:pagination="pagination"
-        v-model:row-selection="rowSelection"
-        :data="displayedData"
-        :columns="columns"
-        :loading="isLoading"
-        sticky="header"
-        @select="onSelectRow"
-        :pagination-options="paginationOptions"
-        :ui="{
-          base: 'table-fixed border-separate border-spacing-0',
-          thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
-          tbody: '[&>tr]:last:[&>td]:border-b-0 [&>tr]:data-[selectable=true]:hover:bg-elevated/50',
-          th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r px-4 py-3 text-sm font-semibold',
-          td: 'border-b border-default px-4 py-3'
-        }"
-      />
-    </div>
+      
+        </template>
+      </UDashboardNavbar>
+    </template>
 
-    <!-- Pagination controls -->
-    <div class="flex items-center justify-between px-4 py-3">
-      <div class="text-sm text-muted">
-        {{ rowSelection && Object.keys(rowSelection).length > 0 
-          ? `${Object.keys(rowSelection).length} ligne(s) sélectionnée(s)` 
-          : `Total: ${tableData.length} résultat(s)` }}
-      </div>
-      <UPagination
-        :page="pagination.pageIndex + 1"
-        :total="(table?.tableApi?.getFilteredRowModel().rows.length) || 0"
-        :items-per-page="pagination.pageSize"
-        @update:page="(p) => pagination.pageIndex = p - 1"
-      />
-    </div>
-    </div>
-  </div>
+    <template #body>
+   
+
+     
+        <div class="max-w-6xl mx-auto px-4 py-8">
+          <div class="space-y-4 bg-default/0">
+          <!-- Header with search -->
+          <div class="flex items-center justify-between gap-3">
+            <div class="">
+              <UInput 
+                v-model="globalSearch" 
+                icon="i-lucide-search"
+                placeholder="Rechercher dans les résultats..."
+                class="w-full"
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <UButton 
+                icon="i-lucide-download"
+                label="Exporter"
+                color="neutral"
+                variant="outline"
+                @click="exportData"
+              />
+              <UButton
+                icon="i-lucide-trash-2"
+                label="Vider cache"
+                color="error"
+                variant="ghost"
+                @click="onClearCache"
+              />
+            </div>
+          </div>
+      
+          <!-- Table with pagination -->
+          <div class="border border-default rounded-lg overflow-auto max-h-[65vh] bg-surface">
+            <UTable
+              ref="table"
+              v-model:sorting="sorting"
+              v-model:column-filters="columnFilters"
+              v-model:pagination="pagination"
+              v-model:row-selection="rowSelection"
+              :data="displayedData"
+              :columns="columns"
+              :loading="isLoading"
+              sticky="header"
+              @select="onSelectRow"
+              :pagination-options="paginationOptions"
+              :ui="{
+                base: 'table-fixed border-separate border-spacing-0',
+                thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
+                tbody: '[&>tr]:last:[&>td]:border-b-0 [&>tr]:data-[selectable=true]:hover:bg-elevated/50',
+                th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r px-4 py-3 text-sm font-semibold',
+                td: 'border-b border-default px-4 py-3'
+              }"
+            />
+          </div>
+      
+          <!-- Pagination controls -->
+          <div class="flex items-center justify-between px-4 py-3">
+            <div class="text-sm text-muted">
+              {{ rowSelection && Object.keys(rowSelection).length > 0 
+                ? `${Object.keys(rowSelection).length} ligne(s) sélectionnée(s)` 
+                : `Total: ${tableData.length} résultat(s)` }}
+            </div>
+            <UPagination
+              :page="pagination.pageIndex + 1"
+              :total="(table?.tableApi?.getFilteredRowModel().rows.length) || 0"
+              :items-per-page="pagination.pageSize"
+              @update:page="(p) => pagination.pageIndex = p - 1"
+            />
+          </div>
+          </div>
+        </div>
+    </template>
+  </UDashboardPanel>
 </template>
 
 <script lang="ts" setup>
@@ -67,16 +113,19 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { TableColumn } from '@nuxt/ui'
 import { useUploadStore } from '~/stores/useUploadStore'
+import { useTransactionsStore } from '~/stores/useTransactionsStore'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { h, resolveComponent } from 'vue'
-
+const formModal = ref(false)
 const UBadge = resolveComponent('UBadge')
+const { isNotificationsSlideoverOpen } = useDashboard()
 
 type ResultRow = Record<string, any>
 
 const route = useRoute()
 const fileId = String(route.params.id || '')
 const uploadStore = useUploadStore()
+// const txStore = useTransactionsStore()
 
 // State
 const file = computed(() => uploadStore.files.find(f => f.id === fileId))
@@ -87,6 +136,26 @@ const page = ref(1)
 const isLoading = ref(false)
 const globalSearch = ref('')
 const rowSelection = ref<Record<string, boolean>>({})
+
+const txStore = useTransactionsStore()
+const resolveTotalRows = () => {
+  if (!jobId.value) return file.value?.totalRows ?? file.value?.rowCount
+  return file.value?.totalRows ?? file.value?.rowCount ?? txStore.ensureJob(jobId.value, pagination.value.pageSize).totalRows
+}
+const updateProgressFromRows = () => {
+  if (!file.value || !jobId.value) return
+  const job = txStore.ensureJob(jobId.value, pagination.value.pageSize)
+  const total = resolveTotalRows()
+  const processed = job.rows.length
+  if (total && total > 0) {
+    const progress = Math.min(100, Math.round((processed / total) * 100))
+    uploadStore.updateFile(file.value.id, { progress, rowCount: total, totalRows: total })
+    if (processed >= total) {
+      uploadStore.updateFile(file.value.id, { status: 'completed', progress: 100, rowCount: total, totalRows: total })
+      txStore.markCompleted(jobId.value)
+    }
+  }
+}
 
 // Pagination
 const pagination = ref({
@@ -204,20 +273,22 @@ const columns: TableColumn<ResultRow>[] = [
   {
     accessorKey: 'error_message',
     header: ({ column }) => getHeader(column, 'Erreur'),
-    size: 220,
+    size: 140,
     cell: ({ row }) => {
       const error = row.getValue('error_message')
       if (!error) return h('span', { class: 'text-muted' }, '—')
 
       const full = String(error)
-      // Render single-line truncated error with native title tooltip
+      const truncated = full.length > 30 ? full.substring(0, 30) + '...' : full
+      // Render truncated error with UTooltip
       return h(
-        'div',
+        resolveComponent('UTooltip'),
         {
-          class: 'max-w-[28ch] truncate whitespace-nowrap overflow-hidden text-error text-xs',
-          title: full
+          text: full,
+          side: 'top',
+          ui: { base: 'max-w-xs text-xs' }
         },
-        full
+        () => h('span', { class: 'text-error text-xs cursor-help' }, truncated)
       )
     }
   },
@@ -325,6 +396,37 @@ function exportData() {
   })
 }
 
+async function onClearCache() {
+  if (!jobId.value) return
+  const ok = confirm('Confirmer : vider le cache local pour ce job ? (les données locales seront supprimées)')
+  if (!ok) return
+
+  // clear local cache for this job
+  txStore.clearJob(jobId.value)
+
+  // reset UI table
+  tableData.value = []
+  pagination.value.pageIndex = 0
+
+  // reset upload store progress/status to 0 but keep the file
+  if (file.value) {
+    uploadStore.updateFile(file.value.id, { progress: 0, status: 'in_progress' })
+  }
+
+  const delServer = confirm('Supprimer également les fichiers serveur (CSV + meta) ? Cela est irréversible.')
+  if (delServer) {
+    try {
+      await $fetch(`/api/payments/delete/${jobId.value}`, { method: 'POST' })
+      // notify
+      const toast = useToast()
+      toast.add({ title: 'Fichiers serveur supprimés', color: 'success' })
+    } catch (e) {
+      const toast = useToast()
+      toast.add({ title: 'Erreur suppression serveur', color: 'error' })
+    }
+  }
+}
+
 // Action: handle row selection
 function onSelectRow(e: Event, row: any) {
   row.toggleSelected(!row.getIsSelected())
@@ -335,23 +437,47 @@ async function fetchPage() {
   if (!jobId.value) return
   try {
     isLoading.value = true
-    const res = await $fetch(`/api/payments/result/${jobId.value}`, { 
-      params: { page: page.value } 
+    const res = await $fetch(`/api/payments/result/${jobId.value}`, {
+      params: { page: page.value }
     })
     const data = (res as any).data as ResultRow[] | undefined
 
+    // If we don't yet know total rows, attempt to read status meta
+    const jobCache = txStore.ensureJob(jobId.value, 10)
+    if (!jobCache.totalRows) {
+      try {
+        const status = await $fetch(`/api/payments/status/${jobId.value}`)
+        // @ts-ignore
+        const total = status.total ?? status.totalRows ?? undefined
+        if (total) txStore.setTotal(jobId.value, total)
+      } catch (e) {
+        // ignore
+      }
+    }
+
     if (!data || data.length === 0) {
       consecutiveEmpty++
+      txStore.appendPage(jobId.value, page.value, [])
     } else {
       consecutiveEmpty = 0
       const batch = [...data].reverse()
+      // update UI and store (store will dedupe / unshift)
       tableData.value.unshift(...batch)
+      txStore.appendPage(jobId.value, page.value, data)
     }
 
     page.value++
 
-    if (consecutiveEmpty >= 2) {
-      stopPolling()
+    // Mark completed only when we reached the known total rows (if known)
+    updateProgressFromRows()
+    const total = resolveTotalRows()
+    if (total && total > 0) {
+      const job = txStore.ensureJob(jobId.value, pagination.value.pageSize)
+      if (job.rows.length >= total) {
+        txStore.markCompleted(jobId.value)
+        if (file.value) uploadStore.updateFile(file.value.id, { status: 'completed', progress: 100, totalRows: total, rowCount: total })
+        stopPolling()
+      }
     }
   } catch (err) {
     console.error('fetchPage error', err)
@@ -361,12 +487,23 @@ async function fetchPage() {
 }
 
 function startPolling() {
-  page.value = 1
-  consecutiveEmpty = 0
-  tableData.value = []
+  // load persisted state if available
+  if (jobId.value) {
+    txStore.init()
+    const job = txStore.ensureJob(jobId.value, 10)
+    // populate tableData with cached rows
+    tableData.value = [...job.rows]
+    consecutiveEmpty = job.consecutiveEmpty ?? 0
+    // resume from lastFetchedPage + 1
+    page.value = (job.lastFetchedPage || 0) + 1
+    updateProgressFromRows()
+  } else {
+    page.value = 1
+  }
+
   rowSelection.value = {}
   pagination.value.pageIndex = 0
-  
+
   fetchPage()
   intervalId = setInterval(() => {
     fetchPage()

@@ -9,6 +9,10 @@ export interface UploadedFile {
   rowCount: number
   status: UploadStatus
   jobId?: string
+  // progress percentage 0-100
+  progress?: number
+  // optional known total rows provided by server meta
+  totalRows?: number
 }
 
 const STORAGE_KEY = 'uploadedFiles'
@@ -41,7 +45,7 @@ export const useUploadStore = defineStore('upload', {
       }
     },
 
-    addFile(payload: { filename: string; rowCount?: number; timestamp?: number; status?: UploadStatus; jobId?: string }) {
+  addFile(payload: { filename: string; rowCount?: number; timestamp?: number; status?: UploadStatus; jobId?: string }) {
       const id = `${Date.now()}-${Math.floor(Math.random() * 10000)}`
       const file: UploadedFile = {
         id,
@@ -49,7 +53,10 @@ export const useUploadStore = defineStore('upload', {
         timestamp: payload.timestamp ?? Date.now(),
         rowCount: payload.rowCount ?? 0,
         status: payload.status ?? 'in_progress',
-        jobId: payload.jobId
+        jobId: payload.jobId,
+        progress: 0,
+        // Keep a copy of expected total rows to drive progress
+        totalRows: payload.rowCount ?? undefined
       }
       this.files.unshift(file)
       this.persist()
@@ -68,7 +75,10 @@ export const useUploadStore = defineStore('upload', {
         timestamp: patch.timestamp ?? current.timestamp,
         rowCount: patch.rowCount ?? current.rowCount,
         status: patch.status ?? current.status,
-        jobId: patch.jobId ?? current.jobId
+        jobId: patch.jobId ?? current.jobId,
+        progress: patch.progress ?? current.progress,
+        // keep total rows in sync with rowCount when provided
+        totalRows: patch.totalRows ?? patch.rowCount ?? current.totalRows
       }
       this.persist()
       return true

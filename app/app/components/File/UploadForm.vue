@@ -87,6 +87,7 @@ const emit = defineEmits<{
 const uploading = ref(false)
 const progress = ref(0)
 const currentFile = ref<File | null>(null)
+const detectedRowCount = ref(0)
 let xhr: XMLHttpRequest | null = null
 
 // v-model target from UFileUpload — can be File, FileList, array or null
@@ -112,6 +113,29 @@ watch(fileModel, (val) => {
     return
   }
   currentFile.value = null
+})
+
+// Whenever a file is selected, read and count CSV rows client-side (fast for <=10MB)
+watch(currentFile, async (f) => {
+  detectedRowCount.value = 0
+  if (!f) return
+  try {
+    // use File.text() (modern browsers) to get content
+    const text = await f.text()
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '')
+    let count = lines.length
+    if (count > 0) {
+      const first = lines[0] || ''
+      // heuristics: if first row looks like a header (contains letters and commas), subtract it
+      if (first.includes(',') && /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(first)) {
+        count = Math.max(0, count - 1)
+      }
+    }
+    detectedRowCount.value = count
+  } catch (e) {
+    // fallback to 0 on any error
+    detectedRowCount.value = 0
+  }
 })
 
 function uploadFile(fileArg?: File | null) {
@@ -144,18 +168,16 @@ function uploadFile(fileArg?: File | null) {
       if (status >= 200 && status < 300) {
         progress.value = 100
         // show success toast with server message
-        toast.add({
-          title: 'Upload terminé',
-          description: data?.message || 'Fichier envoyé au backend',
-          color: 'success'
-        })
+      
 
         // Persist to store and attach jobId returned by backend
         const jobId = data?.jobId as string | undefined
+        // prefer detectedRowCount (client-side) if available, otherwise fallback to server-provided rows
+        const rowCount = detectedRowCount.value || (data?.rows?.length || 0)
         const added = uploadStore.addFile({
           filename: currentFile.value?.name || 'Unknown',
           timestamp: Date.now(),
-          rowCount: data?.rows?.length || 0,
+          rowCount,
           status: 'in_progress',
           jobId
         })
@@ -164,7 +186,7 @@ function uploadFile(fileArg?: File | null) {
         emit('uploadSuccess', {
           filename: currentFile.value?.name || 'Unknown',
           timestamp: new Date().toISOString(),
-          rowCount: data?.rows?.length || 0
+          rowCount
         })
 
         // small delay to show 100%, then close modal and navigate to transaction page for this file
@@ -173,7 +195,7 @@ function uploadFile(fileArg?: File | null) {
           currentFile.value = null
           fileModel.value = null
           model.value = false
-          try { navigateTo(`/transactions/${added.id}`) } catch (e) { /* ignore */ }
+         
         }, 800)
       } else {
         // non-2xx

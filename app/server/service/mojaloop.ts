@@ -53,6 +53,9 @@ export async function processPaymentsBatch(
 
   const state: BatchState = {
     processed: 0,
+    // total will be set before processing starts
+    // @ts-ignore - we augment state dynamically
+    total: 0,
     failed: 0,
     succeeded: 0,
     dataBuffer: [],
@@ -60,6 +63,44 @@ export async function processPaymentsBatch(
   };
 
   try {
+    // Determine total rows so we can expose progress
+    let totalRows = 0
+    try {
+      if (ext === '.csv') {
+        const txt = await fs.promises.readFile(uploadedFile.filepath, 'utf8')
+        totalRows = txt.split('\n').filter(l => l.trim().length > 0).length - 1 // subtract header
+        if (totalRows < 0) totalRows = 0
+      } else if (ext === '.xlsx') {
+        const workbook = xlsx.readFile(uploadedFile.filepath)
+        const sheet = workbook.SheetNames[0]
+        const rows: CsvRow[] = xlsx.utils.sheet_to_json(workbook.Sheets[sheet])
+        totalRows = rows.length
+      }
+    } catch (e) {
+      console.error('Could not determine total rows for progress', e)
+      totalRows = 0
+    }
+
+    // attach total to state for downstream writers
+    // @ts-ignore
+    state.total = totalRows
+
+    // write initial meta file atomically
+    try {
+      const meta = {
+        jobId,
+        processed: 0,
+        total: totalRows,
+        status: 'processing'
+      }
+      const tmp = `public/reports/${jobId}.meta.json.tmp`
+      const dest = `public/reports/${jobId}.meta.json`
+      await fs.promises.writeFile(tmp, JSON.stringify(meta), 'utf8')
+      await fs.promises.rename(tmp, dest)
+    } catch (e) {
+      console.error('Could not write initial meta file', e)
+    }
+
     if (ext === ".csv") {
       await processCsvStream(uploadedFile.filepath, state);
     } else if (ext === ".xlsx") {
@@ -83,6 +124,22 @@ export async function processPaymentsBatch(
       }
     }
     console.log(`Job ${jobId} finished: ${state.processed} rows processed.`);
+    // finalize meta file
+    try {
+      const metaPath = `public/reports/${jobId}.meta.json`
+      const meta = {
+        jobId,
+        processed: state.processed,
+        total: // @ts-ignore
+          (state as any).total ?? state.processed,
+        status: 'completed'
+      }
+      const tmp = `${metaPath}.tmp`
+      await fs.promises.writeFile(tmp, JSON.stringify(meta), 'utf8')
+      await fs.promises.rename(tmp, metaPath)
+    } catch (e) {
+      console.error('Could not finalize meta file', e)
+    }
   }
 }
 
@@ -155,6 +212,37 @@ async function handleSingleRow(row: CsvRow, state: BatchState) {
     await sendToMojaloop(state.dataBuffer);
     state.dataBuffer = [];
   }
+
+    try {
+      // write small meta update per row (best-effort, atomic write)
+      // @ts-ignore
+      const total = (state as any).total ?? 0
+      const meta = {
+        processed: state.processed,
+        total,
+        status: 'processing'
+      }
+      try {
+        // @ts-ignore
+        const ws: any = state.writeStream
+        const path = ws.path as string
+        if (path) {
+          const match = path.match(/public\/reports\/(.+)\.csv$/)
+          let jobIdFromPath: string | undefined = undefined
+          if (match && match[1]) jobIdFromPath = match[1]
+          if (jobIdFromPath) {
+            const metaPath = `public/reports/${jobIdFromPath}.meta.json`
+            const tmp = `${metaPath}.tmp`
+            await fs.promises.writeFile(tmp, JSON.stringify({ jobId: jobIdFromPath, ...meta }), 'utf8')
+            await fs.promises.rename(tmp, metaPath)
+          }
+        }
+      } catch (e) {
+        // ignore write failures
+      }
+    } catch (e) {
+      // ignore
+    }
 }
 
 async function sendToMojaloop(data: Data[]) {
