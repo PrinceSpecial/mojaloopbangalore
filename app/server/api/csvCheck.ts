@@ -115,8 +115,10 @@ export default defineEventHandler(async (event: H3Event) => {
         worker: {
           workerData: { accepted: payload, refused: refusedRows },
           execArgv: [
-            "--import",
-            "tsx/esm",
+            "--require",
+            "ts-node/register",
+            "--loader",
+            "ts-node/esm",
           ],
         },
       },
