@@ -47,6 +47,7 @@ services:
     environment:
       - AUTH_ENABLED=FALSE
       - CURRENT_MODE=hub
+      - NODE_OPTIONS=--max-old-space-size=8192
     command: npm start
     volumes:
       - "./spec_files:/opt/app/spec_files"
