@@ -159,7 +159,32 @@ async function handleSingleRow(row: CsvRow, state: BatchState) {
 
 async function sendToMojaloop(data: Data[]) {
   const payload = buildPayload(data);
-  // TODO: Call Mojaloop
+  const url = "http://localhost:4040/bulkTransfers";
+  console.log("MOJALAUNCHED")
+
+  // try {
+    // const response = await 
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/vnd.interoperability.bulkTransfers+json;version=1.0", 
+        "Accept": "application/vnd.interoperability.bulkTransfers+json;version=1",
+        "Date": new Date().toUTCString(),
+        "FSPIOP-Source": "itk-load-test-dfsp",
+      },
+      body: JSON.stringify(payload),
+    });
+
+  //   if (!response.ok) {
+  //     const errorText = await response.text();
+  //     console.error(`❌ Mojaloop Error (${response.status}):`, errorText);
+  //     // return false;
+  //   } 
+  //   return true;
+  // } catch (error) {
+  //   console.error("❌ Network Error sending to Mojaloop:", error);
+  //   // return false;
+  // }
 }
 
 function buildPayload(data: Data[]) {
