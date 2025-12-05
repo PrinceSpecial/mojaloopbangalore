@@ -92,6 +92,16 @@ export function startUploadProgressPoller(interval = 3000) {
             if ((totalKnown && totalKnown > 0 && processedNow >= totalKnown) || (serverCompleted && jobNow.consecutiveEmpty >= 2)) {
               txStore.markCompleted(f.jobId)
               store.updateFile(f.id, { status: 'completed', progress: 100, rowCount: totalKnown ?? f.rowCount, totalRows: totalKnown ?? f.totalRows })
+
+              try {
+                await $fetch('/api/payments/send-file', {
+                  method: 'POST',
+                  body: { jobId: f.jobId }
+                })
+                console.log(`Fichier envoyé à n8n pour jobId ${f.jobId}`)
+              } catch (err) {
+                console.error("Erreur lors de l'envoi du fichier à n8n :", err)
+              }
             }
           } finally {
             delete inFlight[inflightKey]

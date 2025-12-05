@@ -1,4 +1,5 @@
 <template>
+  <FileUploadForm v-model="formModal" @upload-success="onUploadSuccess" />
     <DetailsModal v-model="openDetailsModal" :data="selectedRow"/>
     <UDashboardPanel id="Details">
     <template #header>
@@ -34,7 +35,7 @@
    
 
      
-        <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="max-w-7xl mx-auto px-4 py-8 pt-3">
           <div class="space-y-4 bg-default/0">
           <!-- Header with search -->
           <div class="flex items-center justify-between gap-3">
@@ -136,7 +137,7 @@
           <DataTableStats :data="tableData" />
       
           <!-- Table with pagination -->
-          <div class="relative border border-default rounded-lg overflow-auto max-h-[65vh] bg-surface">
+          <div class="relative border border-default rounded-lg  max-h-[70vh]  overflow-auto bg-surface">
             <UTable
               ref="table"
               v-model:sorting="sorting"
@@ -177,6 +178,7 @@
         </div>
     </template>
   </UDashboardPanel>
+  
 </template>
 
 <script lang="ts" setup>
@@ -698,6 +700,13 @@ onMounted(() => {
 onUnmounted(() => {
   stopPolling()
 })
+const onUploadSuccess = (data: { filename: string; timestamp: string; rowCount: number }) => {
+  const ts = new Date(data.timestamp).getTime()
+  const exists = uploadStore.files.some(f => f.filename === data.filename && Math.abs(f.timestamp - ts) < 2000)
+  if (!exists) {
+    uploadStore.addFile({ filename: data.filename, rowCount: data.rowCount, timestamp: ts, status: 'in_progress' })
+  }
+}
 </script>
 
 <style>
