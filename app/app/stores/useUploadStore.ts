@@ -8,6 +8,7 @@ export interface UploadedFile {
   timestamp: number
   rowCount: number
   status: UploadStatus
+  jobId?: string
 }
 
 const STORAGE_KEY = 'uploadedFiles'
@@ -40,14 +41,15 @@ export const useUploadStore = defineStore('upload', {
       }
     },
 
-    addFile(payload: { filename: string; rowCount?: number; timestamp?: number; status?: UploadStatus }) {
+    addFile(payload: { filename: string; rowCount?: number; timestamp?: number; status?: UploadStatus; jobId?: string }) {
       const id = `${Date.now()}-${Math.floor(Math.random() * 10000)}`
-      const file = {
+      const file: UploadedFile = {
         id,
         filename: payload.filename,
         timestamp: payload.timestamp ?? Date.now(),
         rowCount: payload.rowCount ?? 0,
-        status: payload.status ?? 'completed'
+        status: payload.status ?? 'in_progress',
+        jobId: payload.jobId
       }
       this.files.unshift(file)
       this.persist()
@@ -65,7 +67,8 @@ export const useUploadStore = defineStore('upload', {
         filename: patch.filename ?? current.filename,
         timestamp: patch.timestamp ?? current.timestamp,
         rowCount: patch.rowCount ?? current.rowCount,
-        status: patch.status ?? current.status
+        status: patch.status ?? current.status,
+        jobId: patch.jobId ?? current.jobId
       }
       this.persist()
       return true

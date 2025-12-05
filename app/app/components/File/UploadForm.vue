@@ -76,6 +76,7 @@
 
 <script lang="ts" setup>
 import { ref, watch } from 'vue'
+import { useUploadStore } from '~/stores/useUploadStore'
 
 const model = defineModel({ type: Boolean })
 
@@ -91,6 +92,7 @@ let xhr: XMLHttpRequest | null = null
 // v-model target from UFileUpload — can be File, FileList, array or null
 const fileModel = ref<any>(null)
 const toast = useToast()
+const uploadStore = useUploadStore()
 
 watch(fileModel, (val) => {
   if (!val) {
@@ -144,23 +146,34 @@ function uploadFile(fileArg?: File | null) {
         // show success toast with server message
         toast.add({
           title: 'Upload terminé',
-          description: data?.message || (data?.rows ? `Fichier traité — ${data.rows.length} lignes` : 'Fichier envoyé au backend'),
+          description: data?.message || 'Fichier envoyé au backend',
           color: 'success'
         })
 
-        // emit success event to parent with file info
+        // Persist to store and attach jobId returned by backend
+        const jobId = data?.jobId as string | undefined
+        const added = uploadStore.addFile({
+          filename: currentFile.value?.name || 'Unknown',
+          timestamp: Date.now(),
+          rowCount: data?.rows?.length || 0,
+          status: 'in_progress',
+          jobId
+        })
+
+        // emit success event to parent for compatibility
         emit('uploadSuccess', {
           filename: currentFile.value?.name || 'Unknown',
           timestamp: new Date().toISOString(),
           rowCount: data?.rows?.length || 0
         })
 
-        // small delay to show 100%, then close modal
+        // small delay to show 100%, then close modal and navigate to transaction page for this file
         setTimeout(() => {
           progress.value = 0
           currentFile.value = null
           fileModel.value = null
           model.value = false
+          try { navigateTo(`/transactions/${added.id}`) } catch (e) { /* ignore */ }
         }, 800)
       } else {
         // non-2xx
