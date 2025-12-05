@@ -34,7 +34,7 @@
    
 
      
-        <div class="max-w-6xl mx-auto px-4 py-8">
+        <div class="max-w-7xl mx-auto px-4 py-8">
           <div class="space-y-4 bg-default/0">
           <!-- Header with search -->
           <div class="flex items-center justify-between gap-3">
@@ -42,7 +42,7 @@
               <UInput 
                 v-model="globalSearch" 
                 icon="i-lucide-search"
-                placeholder="Rechercher dans les résultats..."
+                placeholder="Rechercher"
                 class="w-full"
               />
             </div>
@@ -55,12 +55,19 @@
                 @click="exportData"
               />
               <UButton
+                icon="i-lucide-download"
+                label="Exporter erreurs"
+                color="error"
+                variant="outline"
+                @click="exportErrors"
+              />
+              <!-- <UButton
                 icon="i-lucide-trash-2"
                 label="Vider cache"
                 color="error"
                 variant="ghost"
                 @click="onClearCache"
-              />
+              /> -->
             </div>
           </div>
       
@@ -238,11 +245,7 @@ const columns: TableColumn<ResultRow>[] = [
     header: ({ column }) => getHeader(column, 'Montant'),
     cell: ({ row }) => {
       const amount = Number.parseFloat(row.getValue('montant') || '')
-      const formatted = new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'XAF'
-      }).format(amount)
-      return h('div', { class: 'text-right font-mono' }, formatted)
+      return h('div', { class: 'text-right font-mono' }, amount)
     }
   },
   {
@@ -393,6 +396,45 @@ function exportData() {
     title: 'Données exportées',
     color: 'success',
     icon: 'i-lucide-circle-check'
+  })
+}
+
+// Export only rows that are not success/completed
+function exportErrors() {
+  const rows = tableData.value.filter(r => {
+    const status = String(r.statut || r.status || '').toLowerCase()
+    return status !== 'success' && status !== 'completed' && status !== 'succes'
+  })
+
+  if (rows.length === 0) {
+    const toast = useToast()
+    toast.add({ title: 'Aucune ligne en erreur', color: 'info' })
+    return
+  }
+
+  const headers = Object.keys(rows[0] || {})
+  const csv = [
+    headers.join(','),
+    ...rows.map(row =>
+      headers.map(h => `"${String(row[h]).replace(/"/g, '""')}"`).join(',')
+    )
+  ].join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `transactions_erreurs_${fileId}_${new Date().toISOString().split('T')[0]}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+
+  const toast = useToast()
+  toast.add({
+    title: 'Erreurs exportées',
+    color: 'warning',
+    icon: 'i-lucide-download'
   })
 }
 
