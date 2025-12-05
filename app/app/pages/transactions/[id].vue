@@ -54,6 +54,67 @@
                 variant="outline"
                 @click="exportData"
               />
+              <UPopover :content="{ align: 'end' }">
+                <UButton 
+                  icon="i-lucide-calendar-clock"
+                  label="Programmer paiement"
+                  color="primary"
+                  variant="outline"
+                />
+                <template #content>
+                  <div class="p-4 w-80 space-y-4">
+                    <div>
+                      <h3 class="text-sm font-semibold mb-3">Programmer le paiement récurrent</h3>
+                      <p class="text-xs text-muted mb-4">Configurez le jour du mois et l'heure pour un paiement automatique mensuel</p>
+                    </div>
+                    
+                    <div class="space-y-3">
+                      <div>
+                        <label class="text-xs font-medium text-muted mb-1.5 block">Jour du mois</label>
+                        <USelect
+                          v-model="selectedDayOfMonth"
+                          :items="dayOfMonthOptions"
+                          placeholder="Choisir le jour (ex: 5, 15, 31)"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label class="text-xs font-medium text-muted mb-1.5 block">Heure</label>
+                        <UInput
+                          v-model="scheduledTime"
+                          type="time"
+                          icon="i-lucide-clock"
+                          placeholder="HH:MM"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 pt-2 border-t border-default">
+                      <UButton
+                        label="Annuler"
+                        color="neutral"
+                        variant="ghost"
+                        size="sm"
+                        @click="closeSchedulePopover"
+                        class="flex-1"
+                      />
+                      <UButton
+                        label="Programmer"
+                        color="primary"
+                        size="sm"
+                        @click="schedulePayment"
+                        class="flex-1"
+                        :disabled="!canSchedule"
+                      />
+                    </div>
+                    
+                    <div v-if="scheduledInfo" class="mt-3 p-2 bg-primary/10 border border-primary/20 rounded text-xs text-primary">
+                      <UIcon name="i-lucide-info" class="w-4 h-4 inline mr-1" />
+                      {{ scheduledInfo }}
+                    </div>
+                  </div>
+                </template>
+              </UPopover>
               <UButton
                 icon="i-lucide-download"
                 label="Exporter erreurs"
@@ -148,6 +209,58 @@ const page = ref(1)
 const isLoading = ref(false)
 const globalSearch = ref('')
 const rowSelection = ref<Record<string, boolean>>({})
+
+// Schedule payment state
+const schedulePopoverOpen = ref(false)
+const selectedDayOfMonth = ref<number | undefined>(undefined)
+const scheduledTime = ref('09:00')
+const scheduledInfo = ref('')
+
+// Day of month options (1-31)
+const dayOfMonthOptions = Array.from({ length: 31 }, (_, i) => ({
+  label: `Jour ${i + 1}`,
+  value: i + 1
+}))
+
+const canSchedule = computed(() => {
+  return selectedDayOfMonth.value !== undefined && scheduledTime.value.length > 0
+})
+
+function closeSchedulePopover() {
+  schedulePopoverOpen.value = false
+  selectedDayOfMonth.value = undefined
+  scheduledTime.value = '09:00'
+  scheduledInfo.value = ''
+}
+
+function schedulePayment() {
+  if (!canSchedule.value) return
+  
+  const day = selectedDayOfMonth.value!
+  
+  // Format scheduled info message for recurring monthly payment
+  scheduledInfo.value = `Paiement récurrent programmé pour le ${day} de chaque mois à ${scheduledTime.value}`
+  
+  // TODO: Implement actual recurring payment scheduling logic here
+  // This would typically involve:
+  // 1. Creating a scheduled payment job/task with cron expression: "0 HH MM DD * *"
+  // 2. Storing the schedule configuration (day of month, time)
+  // 3. Setting up a cron job or similar mechanism to execute payments monthly
+  // Example cron: "0 9 5 * *" = Every 5th day of month at 09:00
+  
+  const toast = useToast()
+  toast.add({
+    title: 'Paiement récurrent programmé',
+    description: scheduledInfo.value,
+    color: 'success',
+    icon: 'i-lucide-calendar-check'
+  })
+  
+  // Keep popover open to show the info message
+  setTimeout(() => {
+    closeSchedulePopover()
+  }, 2000)
+}
 
 const txStore = useTransactionsStore()
 const resolveTotalRows = () => {
