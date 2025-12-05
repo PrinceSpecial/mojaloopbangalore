@@ -29,7 +29,6 @@
         </template>
       </UDashboardNavbar>
     </template>
-
     <template #body>
    
 
@@ -70,9 +69,12 @@
               /> -->
             </div>
           </div>
+
+          <!-- Statistics Component -->
+          <DataTableStats :data="tableData" />
       
           <!-- Table with pagination -->
-          <div class="border border-default rounded-lg overflow-auto max-h-[65vh] bg-surface">
+          <div class="relative border border-default rounded-lg overflow-auto max-h-[65vh] bg-surface">
             <UTable
               ref="table"
               v-model:sorting="sorting"
@@ -86,10 +88,10 @@
               @select="onSelectRow"
               :pagination-options="paginationOptions"
               :ui="{
-                base: 'table-fixed border-separate border-spacing-0',
-                thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
+                base: 'table-fixed w-full border-separate border-spacing-0',
+                thead: 'sticky top-0 z-20 [&>tr]:bg-surface [&>tr]:after:content-none',
                 tbody: '[&>tr]:last:[&>td]:border-b-0 [&>tr]:data-[selectable=true]:hover:bg-elevated/50',
-                th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r px-4 py-3 text-sm font-semibold',
+                th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r px-4 py-3 text-sm font-semibold bg-surface',
                 td: 'border-b border-default px-4 py-3'
               }"
             />
@@ -104,7 +106,7 @@
             </div>
             <UPagination
               :page="pagination.pageIndex + 1"
-              :total="(table?.tableApi?.getFilteredRowModel().rows.length) || 0"
+              :total="displayedData.length"
               :items-per-page="pagination.pageSize"
               @update:page="(p) => pagination.pageIndex = p - 1"
             />
@@ -123,6 +125,7 @@ import { useUploadStore } from '~/stores/useUploadStore'
 import { useTransactionsStore } from '~/stores/useTransactionsStore'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { h, resolveComponent } from 'vue'
+import DataTableStats from '~/components/transactions/DataTableStats.vue'
 const formModal = ref(false)
 const UBadge = resolveComponent('UBadge')
 const { isNotificationsSlideoverOpen } = useDashboard()
